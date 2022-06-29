@@ -70,6 +70,10 @@ class Board {
     return keys.filter(key => this.squares[key].isUnused());
   }
 
+  isUnusedSquare(key) {
+    return this.squares[key].isUnused();
+  }
+
   isFull() {
     return this.unusedSquares().length === 0;
   }
@@ -169,6 +173,7 @@ class TTTGame {
   playOneGame() {
     this.board.reset();
     this.board.display();
+
     while (true) {
       this.humanMoves();
       if (this.gameOver()) break;
@@ -227,14 +232,39 @@ class TTTGame {
   }
 
   computerMoves() {
-    let validChoices = this.board.unusedSquares();
-    let choice;
+    let choice = this.defensiveComputerMoves();
 
-    do {
-      choice = Math.floor((9 * Math.random()) + 1).toString();
-    } while (!validChoices.includes(choice));
+    if (!choice) {
+      let validChoices = this.board.unusedSquares();
+
+      do {
+        choice = Math.floor((9 * Math.random()) + 1).toString();
+      } while (!validChoices.includes(choice));
+    }
 
     this.board.markSquareAt(choice, this.computer.getMarker());
+  }
+
+  defensiveComputerMoves() {
+    for (let index = 0; index < TTTGame.POSSIBLE_WINNING_ROWS.length; ++index) {
+      let row = TTTGame.POSSIBLE_WINNING_ROWS[index];
+
+      if (this.board.countMarkersFor(this.human, row) === 2) {
+        let key = this.atRiskSquare(row);
+        if (key) return key;
+      }
+    }
+
+    return null;
+  }
+
+  atRiskSquare(row) {
+    {
+      let index = row.findIndex(key => this.board.isUnusedSquare(key));
+      if (index >= 0) return row[index];
+    }
+
+    return null;
   }
 
   gameOver() {
@@ -248,11 +278,11 @@ class TTTGame {
 
   playAgain() {
     let result = readline.question(`Play again? ('y' or 'n'): `).toLowerCase();
-    while (result !== 'y' && result !== 'n') {
-      result = readline.question(`Please enter 'y' or 'n': `).toLowerCase();
+    while (result !== 'y' && result !== 'n' && result !== 'yes' && result !== 'no') {
+      result = readline.question(`Please enter (y)es or (n)o: `).toLowerCase();
     }
 
-    return result === 'y';
+    return result[0] === 'y';
   }
 }
 
