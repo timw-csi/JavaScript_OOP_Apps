@@ -85,22 +85,24 @@ class Board {
 
     return markers.length;
   }
-
-  // reset() {
-  //   let keys = Object.keys(this.squares);
-  //   keys.forEach(key => {
-  //     this.squares[key].setMarker(Square.UNUSED_SQUARE);
-  //   });
-  // }
 }
 
 class Player {
   constructor(marker) {
     this.marker = marker;
+    this.score = 0;
   }
 
   getMarker() {
     return this.marker;
+  }
+
+  incrementScore() {
+    this.score += 1;
+  }
+
+  getScore() {
+    return this.score;
   }
 }
 
@@ -122,6 +124,11 @@ class TTTGame {
     this.human = new Human();
     this.computer = new Computer();
   }
+
+  static CENTER_SQUARE = '5';
+  static MATCH_GOAL = 3;
+  static FULL_ROW = 3;
+  static TWO_OF_THREE = 2;
 
   static POSSIBLE_WINNING_ROWS = [
     [ "1", "2", "3" ],            // top row of board
@@ -157,16 +164,7 @@ class TTTGame {
 
   play() {
     this.displayWelcomeMessage();
-
-    while (true) {
-      this.playOneGame();
-
-      if (!this.playAgain()) break;
-
-      //console.clear();
-      console.log(`Let's play again!`);
-    }
-
+    this.playMatch();
     this.displayGoodbyeMessage();
   }
 
@@ -185,7 +183,23 @@ class TTTGame {
     }
 
     this.board.displayWithClear();
-    this.displayResults();
+    this.displayGameResults();
+  }
+
+  playMatch() {
+    console.log(`First player to win ${TTTGame.MATCH_GOAL} games wins the match.`);
+
+    while (true) {
+      this.playOneGame();
+      this.tallyMatchScore();
+      this.displayMatchScore();
+
+      if (this.someoneWonMatch()) break;
+      if (!this.playAgain()) break;
+      console.log(`Let's play again!`);
+    }
+
+    this.declareMatchWinner();
   }
 
   displayWelcomeMessage() {
@@ -196,22 +210,6 @@ class TTTGame {
 
   displayGoodbyeMessage() {
     console.log(`Thanks for playing Tic Tac Toe! Goodbye!`);
-  }
-
-  displayResults() {
-    if (this.isWinner(this.human)) {
-      console.log("You won! Congratulations!");
-    } else if (this.isWinner(this.computer)) {
-      console.log("I won! I won! Take that, human!");
-    } else {
-      console.log("A tie game. How boring.");
-    }
-  }
-
-  isWinner(player) {
-    return TTTGame.POSSIBLE_WINNING_ROWS.some(row => {
-      return this.board.countMarkersFor(player, row) === 3;
-    });
   }
 
   humanMoves() {
@@ -232,39 +230,58 @@ class TTTGame {
   }
 
   computerMoves() {
-    //Offense
-    let choice = this.smartComputerMoves(this.computer);
+    let choice = this.offensiveComputerMove();
+    if (!choice) {
+      choice = this.defensiveComputerMove();
+    }
 
     if (!choice) {
-      //Defense
-      choice = this.smartComputerMoves(this.human);
-    } else {
-      //Random
-      let validChoices = this.board.unusedSquares();
+      choice = this.pickCenterSquare();
+    }
 
-      do {
-        choice = Math.floor((9 * Math.random()) + 1).toString();
-      } while (!validChoices.includes(choice));
+    if (!choice) {
+      choice = this.pickRandomSquare();
     }
 
     this.board.markSquareAt(choice, this.computer.getMarker());
   }
 
-  smartComputerMoves(player) {
+  offensiveComputerMove() {
+    return this.findCriticalSquare(this.computer);
+  }
+
+  defensiveComputerMove() {
+    return this.findCriticalSquare(this.human);
+  }
+
+  pickCenterSquare() {
+    return this.board.isUnusedSquare(TTTGame.CENTER_SQUARE) ?
+      TTTGame.CENTER_SQUARE : null;
+  }
+
+  pickRandomSquare() {
+    let validChoices = this.board.unusedSquares();
+    let choice;
+
+    do {
+      choice = Math.floor((9 * Math.random()) + 1).toString();
+    } while (!validChoices.includes(choice));
+
+    return choice;
+  }
+
+  findCriticalSquare(player) {
     for (let index = 0; index < TTTGame.POSSIBLE_WINNING_ROWS.length; ++index) {
       let row = TTTGame.POSSIBLE_WINNING_ROWS[index];
-
-      if (this.board.countMarkersFor(player, row) === 2) {
-        let key = this.atRiskSquare(row);
-        if (key) return key;
-      }
+      let key = this.criticalSquare(player, row);
+      if (key) return key;
     }
 
     return null;
   }
 
-  atRiskSquare(row) {
-    {
+  criticalSquare(player, row) {
+    if (this.board.countMarkersFor(player, row) === TTTGame.TWO_OF_THREE) {
       let index = row.findIndex(key => this.board.isUnusedSquare(key));
       if (index >= 0) return row[index];
     }
@@ -272,22 +289,75 @@ class TTTGame {
     return null;
   }
 
+  displayGameResults() {
+    if (this.isGameWinner(this.human)) {
+      console.log("You won! Congratulations!");
+    } else if (this.isGameWinner(this.computer)) {
+      console.log("I won! I won! Take that, human!");
+    } else {
+      console.log("A tie game. How boring.");
+    }
+  }
+
+  isGameWinner(player) {
+    return TTTGame.POSSIBLE_WINNING_ROWS.some(row => {
+      return this.board.countMarkersFor(player, row) === TTTGame.FULL_ROW;
+    });
+  }
+
   gameOver() {
-    return this.board.isFull() || this.someoneWon();
+    return this.board.isFull() || this.someoneWonGame();
   }
 
 
-  someoneWon() {
-    return this.isWinner(this.human) || this.isWinner(this.computer);
+  someoneWonGame() {
+    return this.isGameWinner(this.human) || this.isGameWinner(this.computer);
+  }
+
+  someoneWonMatch() {
+    return this.isMatchWinner(this.human) || this.isMatchWinner(this.computer);
+  }
+
+  isMatchWinner(player) {
+    return player.getScore() === TTTGame.MATCH_GOAL;
+  }
+
+  tallyMatchScore() {
+    if (this.isGameWinner(this.human)) {
+      this.human.incrementScore();
+    }
+
+    if (this.isGameWinner(this.computer)) {
+      this.computer.incrementScore();
+    }
+  }
+
+  displayMatchScore() {
+    console.log(`*** SCORE FOR BEST-OF-5-GAME MATCH ***`);
+    console.log(`Human: ${this.human.getScore()}   Computer: ${this.computer.getScore()}`);
+  }
+
+  declareMatchWinner() {
+    if (this.isMatchWinner(this.human)) {
+      console.log(`Human is champion in best-of-5-game match.`);
+    }
+
+    if (this.isMatchWinner(this.computer)) {
+      console.log(`Computer is champion in best-of-5-game match.`);
+    }
   }
 
   playAgain() {
     let result = readline.question(`Play again? ('y' or 'n'): `).toLowerCase();
-    while (result !== 'y' && result !== 'n' && result !== 'yes' && result !== 'no') {
+    while (!this.validAnswer(result)) {
       result = readline.question(`Please enter (y)es or (n)o: `).toLowerCase();
     }
 
     return result[0] === 'y';
+  }
+
+  validAnswer(response) {
+    return ['y', 'n', 'yes', 'no'].includes(response);
   }
 }
 
