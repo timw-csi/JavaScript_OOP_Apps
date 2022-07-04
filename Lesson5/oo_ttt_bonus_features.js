@@ -232,9 +232,14 @@ class TTTGame {
   }
 
   computerMoves() {
-    let choice = this.defensiveComputerMoves();
+    //Offense
+    let choice = this.smartComputerMoves(this.computer);
 
     if (!choice) {
+      //Defense
+      choice = this.smartComputerMoves(this.human);
+    } else {
+      //Random
       let validChoices = this.board.unusedSquares();
 
       do {
@@ -245,11 +250,11 @@ class TTTGame {
     this.board.markSquareAt(choice, this.computer.getMarker());
   }
 
-  defensiveComputerMoves() {
+  smartComputerMoves(player) {
     for (let index = 0; index < TTTGame.POSSIBLE_WINNING_ROWS.length; ++index) {
       let row = TTTGame.POSSIBLE_WINNING_ROWS[index];
 
-      if (this.board.countMarkersFor(this.human, row) === 2) {
+      if (this.board.countMarkersFor(player, row) === 2) {
         let key = this.atRiskSquare(row);
         if (key) return key;
       }
