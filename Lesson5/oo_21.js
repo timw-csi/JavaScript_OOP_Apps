@@ -33,9 +33,8 @@ Deck.prototype.shuffle = function(deck) {
 };
 
 Deck.prototype.deal = function(competitor, amount) {
-  let topOfDeck = 0;
   for (let count = 0; count < amount; ++count) {
-    let card = this.cards.splice(topOfDeck, 1)[0];
+    let card = this.cards.shift();
 
     competitor.hand.push(card);
   }
@@ -91,10 +90,6 @@ Participant.prototype.formatCards = function() {
   if (cardArray.length === Participant.INITIAL_HAND_SIZE) {
     return cardArray.join(' and ');
   } else return cardArray.slice(0, -1).join(', ') + ', and ' + this.lastCard();
-};
-
-Participant.prototype.displayHand = function() {
-  console.log(`${this.getName()} hand: ${this.formatCards()}`);
 };
 
 Participant.prototype.getScore = function() {
@@ -159,13 +154,14 @@ Player.prototype.isRich = function() {
 
 Player.prototype.hitOrStay = function() {
   let validChoices = ['h', 's', 'hit', 'stay'];
+  console.log('');
   let answer = readline.question(`(H)it or (s)tay? : `).toLowerCase();
 
   while (!validChoices.includes(answer)) {
     answer = readline.question(`Please enter (h)it or (s)tay: `).toLowerCase();
   }
 
-  return answer[0];
+  return answer[0] === 'h';
 };
 
 function Dealer() {
@@ -190,14 +186,14 @@ Dealer.prototype.formatInitialHand = function() {
 };
 
 Dealer.prototype.displayInitialHand = function() {
-  console.log(`Dealer hand: ${this.formatInitialHand()}`);
+  console.log('');
+  console.log(`Dealer's hand is ${this.formatInitialHand()}`);
 };
 
 Dealer.prototype.initialDealMessage = function() {
   console.log(`*********`);
   console.log('');
   console.log(`(Dealer flicks cards across table)`);
-  console.log('');
 };
 
 function TwentyOneGame() {
@@ -227,9 +223,7 @@ TwentyOneGame.prototype.roundOfGames = function() {
       break;
     }
 
-    let anotherGame = this.playAgain();
-
-    if (anotherGame === 'y') {
+    if (this.playAgain()) {
       this.deck.initialize();
       this.player.reset();
       this.dealer.reset();
@@ -261,7 +255,6 @@ TwentyOneGame.prototype.dealCards = function() {
 };
 
 TwentyOneGame.prototype.playerTurn = function() {
-  let answer;
   this.player.displayMoney();
   this.dealer.initialDealMessage();
 
@@ -270,8 +263,7 @@ TwentyOneGame.prototype.playerTurn = function() {
     this.playerTurnMessages();
     if (this.player.isBusted() || this.player.hasBestScore()) break;
 
-    answer = this.player.hitOrStay();
-    if (answer === 'h') {
+    if (this.player.hitOrStay()) {
       this.deck.deal(this.player, TwentyOneGame.HIT_CARD_AMOUNT);
       console.clear();
       this.player.displayDealtCard();
@@ -385,15 +377,15 @@ TwentyOneGame.prototype.playAgain = function() {
     answer = readline.question(`Please enter (y)es or (n)o: `).toLowerCase();
   }
 
-  return answer[0];
+  return answer[0] === 'y';
 };
 
 TwentyOneGame.prototype.displayWelcomeMessage = function() {
   console.clear();
   this.formatWelcomeMessage('HELLO AND WELCOME TO TWENTY ONE!');
   console.log('');
-  console.log(` The goal is to reach ${Participant.BUST_LIMIT} without going over.\n Number cards are worth their number, face cards are worth 10,\nand Aces are worth 1 or 11, depending on which keeps you under ${Participant.BUST_LIMIT}.`);
-  console.log(` You start with ${this.player.money} dollars in chips, and gain or lose one chip for winning\nor losing, respectively.\n Game ends when your chip count reaches 0 or 10. Good luck!`);
+  console.log(` The goal is to reach ${Participant.BUST_LIMIT} without going over.\n Number cards are worth their number, face cards are worth ${Participant.FACE_CARD_VALUE},\nand Aces are worth ${Participant.LOW_ACE_VALUE} or ${Participant.HIGH_ACE_VALUE}, depending on which keeps you under ${Participant.BUST_LIMIT}.`);
+  console.log(` You start with ${Player.INITIAL_MONEY_AMOUNT} dollars in chips, and gain or lose one chip for winning\nor losing, respectively.\n Game ends when your chip count reaches ${Player.BROKE} or ${Player.RICH}. Good luck!`);
   console.log('');
   console.log('');
   readline.question(`Press enter key to begin game.`);
