@@ -32,12 +32,12 @@ Deck.prototype.shuffle = function(deck) {
   }
 };
 
-Deck.prototype.deal = function(player, amount) {
+Deck.prototype.deal = function(competitor, amount) {
+  let topOfDeck = 0;
   for (let count = 0; count < amount; ++count) {
-    let randomIndex = Math.floor(Math.random() * this.cards.length);
-    let card = this.cards.splice(randomIndex, 1)[0];
+    let card = this.cards.splice(topOfDeck, 1)[0];
 
-    player.hand.push(card);
+    competitor.hand.push(card);
   }
 };
 
